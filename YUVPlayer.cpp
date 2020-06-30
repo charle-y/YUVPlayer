@@ -73,6 +73,9 @@ BOOL CYUVPlayerApp::InitInstance()
 
 	CYUVPlayerDlg dlg;
 	m_pMainWnd = &dlg;
+	
+	//dlg.PlayStandby(m_lpCmdLine);
+
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
 	{
@@ -84,12 +87,13 @@ BOOL CYUVPlayerApp::InitInstance()
 		// TODO: 在此放置处理何时用
 		//  “取消”来关闭对话框的代码
 	}
-
+	
 	// 删除上面创建的 shell 管理器。
 	if (pShellManager != NULL)
 	{
 		delete pShellManager;
 	}
+	
 
 	// 由于对话框已关闭，所以将返回 FALSE 以便退出应用程序，
 	//  而不是启动应用程序的消息泵。

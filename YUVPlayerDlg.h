@@ -128,4 +128,6 @@ public:
     CSliderCtrl m_slProgress;
     afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
     afx_msg void OnTimer(UINT_PTR nIDEvent);
+
+	afx_msg void PlayStandby(CString PathName);
 };

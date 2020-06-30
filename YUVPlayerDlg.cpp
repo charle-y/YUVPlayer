@@ -482,35 +482,46 @@ void CYUVPlayerDlg::OnRExit()
 /////////////////////////////////////////// ------> 单击按钮事件
 void CYUVPlayerDlg::OnBnClickedButtonOpen()
 {
-    KillTimer(1);
-    m_bPlay.SetBitmap(LoadBitmap(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDB_BM_PLAY)));
-    m_fPlay = TRUE;
-
     wchar_t szFilter[] = _T("YUV Files(*.yuv;*.raw)|*.yuv;*.raw|All Files(*.*)|*.*||");
     CFileDialog fileDlg(TRUE, _T("YUV"), NULL, OFN_HIDEREADONLY | OFN_NOCHANGEDIR | OFN_FILEMUSTEXIST, szFilter);
     fileDlg.GetOFN().lpstrTitle = _T("Open YUV File");   // 标题
     if (fileDlg.DoModal() != IDOK)
         return;
-
-    m_strPathName = fileDlg.GetPathName();
-
-    // 显示标题
-    CString strTemp;
-    strTemp.Format(_T("%s-%s"), fileDlg.GetFileName(), APP_NAM);
-    this->SetWindowText(strTemp);
-
-    // 找文件名
-    wchar_t* tmp = wcsrchr(m_strPathName.GetBuffer(), '\\');
-    char szFilename[256] = {0};
-    WideCharToMultiByte(CP_ACP, 0, tmp+1, wcslen(tmp+1), szFilename, 256, NULL, NULL);
-
-    m_pSettingDlg->ParseFilename(szFilename);
-    m_pSettingDlg->SetParametersToParentWnd(m_nWidth, m_nHeight, m_nFps, m_nYuvFormat, m_fLoop);
-
-    // 显示第一帧
-    ShowOpenedFrame();
+	
+	//打开文件的首个界面
+	PlayStandby(fileDlg.GetPathName());
 
     return;
+}
+
+void CYUVPlayerDlg::PlayStandby(CString PathName)
+{
+	m_strPathName = PathName;
+
+	wchar_t szFileName[128] = { 0 };
+	_wsplitpath(m_strPathName, NULL, NULL, szFileName, NULL);
+
+	KillTimer(1);
+	m_bPlay.SetBitmap(LoadBitmap(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDB_BM_PLAY)));
+	m_fPlay = TRUE;
+
+	// 显示标题
+	CString strTemp;
+	strTemp.Format(_T("%s-%s"), szFileName, APP_NAM);
+	this->SetWindowText(strTemp);
+
+	// 找文件名
+	wchar_t* tmp = wcsrchr(m_strPathName.GetBuffer(), '\\');
+	char szFilename[256] = { 0 };
+	WideCharToMultiByte(CP_ACP, 0, tmp + 1, wcslen(tmp + 1), szFilename, 256, NULL, NULL);
+
+	m_pSettingDlg->ParseFilename(szFilename);
+	m_pSettingDlg->SetParametersToParentWnd(m_nWidth, m_nHeight, m_nFps, m_nYuvFormat, m_fLoop);
+
+	// 显示第一帧
+	ShowOpenedFrame();
+
+	return;
 }
 
 void CYUVPlayerDlg::OnBnClickedButtonSave()
@@ -792,6 +803,26 @@ void CYUVPlayerDlg::OnDropFiles(HDROP hDropInfo)
     //change_yuv_file("suzie_qcif_yuv420p_00.yuv", "suzie_qcif_nv21.yuv", 176, 144, 0);
     //change_yuv_file("suzie_qcif_sp.yuv", "suzie_qcif_p.yuv", 176, 144, 1);
     //change_yuv_file("suzie_qcif_yuv422p.yuv", "suzie_qcif_nv61.yuv", 176, 144, 2);
+
+	//TODO 后面考虑改个位置
+	//保存bmp图片到本地目录
+	CFile cFile;
+	CString strFile;
+	wchar_t szFileName[_MAX_FNAME] = { 0 };
+	wchar_t drive[_MAX_DRIVE] = { 0 };
+	wchar_t dir[_MAX_DIR] = { 0 };
+
+	wchar_t* pExt = _T("bmp");
+
+	// 找文件名
+	_wsplitpath(m_strPathName, drive, dir, szFileName, NULL);
+	//pExt = &szExt[1];
+
+	strFile.Format(_T("%s%s%s.%s"), drive, dir, szFileName, pExt);
+
+	cFile.Open(strFile, CFile::modeWrite | CFile::modeCreate);
+	cFile.Write(m_pbBmpData, m_nBmpSize);
+	cFile.Close();
 }
 
 /////////////////////////////
