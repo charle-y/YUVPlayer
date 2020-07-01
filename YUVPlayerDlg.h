@@ -129,5 +129,6 @@ public:
     afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
     afx_msg void OnTimer(UINT_PTR nIDEvent);
 
-	afx_msg void PlayStandby(CString PathName);
+	afx_msg void PlayStandby();
+	afx_msg void UpdateFilePath(CString PathName);
 };

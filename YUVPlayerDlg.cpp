@@ -281,6 +281,9 @@ BOOL CYUVPlayerDlg::OnInitDialog()
     m_fInit = TRUE;
     m_fShowBlack = TRUE;
 
+	//直接显示图片
+	PlayStandby();
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -489,15 +492,18 @@ void CYUVPlayerDlg::OnBnClickedButtonOpen()
         return;
 	
 	//打开文件的首个界面
-	PlayStandby(fileDlg.GetPathName());
+	UpdateFilePath(fileDlg.GetPathName());
+	PlayStandby();
 
     return;
 }
 
-void CYUVPlayerDlg::PlayStandby(CString PathName)
+void CYUVPlayerDlg::PlayStandby()
 {
-	m_strPathName = PathName;
-
+	if (m_strPathName.IsEmpty())
+	{
+		return;
+	}
 	wchar_t szFileName[128] = { 0 };
 	_wsplitpath(m_strPathName, NULL, NULL, szFileName, NULL);
 
@@ -524,6 +530,10 @@ void CYUVPlayerDlg::PlayStandby(CString PathName)
 	return;
 }
 
+void CYUVPlayerDlg::UpdateFilePath(CString PathName)
+{
+	m_strPathName = PathName;
+}
 void CYUVPlayerDlg::OnBnClickedButtonSave()
 {
     // 默认yuv

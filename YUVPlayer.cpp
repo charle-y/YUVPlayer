@@ -74,7 +74,10 @@ BOOL CYUVPlayerApp::InitInstance()
 	CYUVPlayerDlg dlg;
 	m_pMainWnd = &dlg;
 	
-	//dlg.PlayStandby(m_lpCmdLine);
+	CCommandLineInfo cmdInfo;
+	ParseCommandLine(cmdInfo);
+
+	dlg.UpdateFilePath(cmdInfo.m_strFileName);
 
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
