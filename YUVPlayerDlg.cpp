@@ -842,7 +842,7 @@ void CYUVPlayerDlg::Open()
     {
         m_cFile.Close();
     }
-    if (!m_cFile.Open(m_strPathName.GetBuffer(), CFile::modeRead))
+    if (!m_cFile.Open(m_strPathName.GetBuffer(), CFile::modeRead | CFile::shareDenyNone))
     {
         MessageBox(_T("Open YUV file failed."));
         return;
