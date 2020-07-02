@@ -112,6 +112,12 @@ CYUVPlayerDlg::CYUVPlayerDlg(CWnd* pParent /*=NULL*/)
     // just in case
     m_nWidth = 176;
     m_nHeight = 144;
+	m_iPercent = 100;
+	m_ZoomDelt.X = 0;
+	m_ZoomDelt.Y = 0;
+	m_ZoomDeltPre.X = 0;
+	m_ZoomDeltPre.Y = 0;
+
     m_nFps = 30;
     m_nYuvFormat = 0;
     m_fLoop = FALSE;
@@ -192,6 +198,7 @@ BEGIN_MESSAGE_MAP(CYUVPlayerDlg, CDialogEx)
     ON_COMMAND(ID_HELP_TRANSFORM, &CYUVPlayerDlg::OnHelpTransform)
     ON_WM_HSCROLL()
     ON_WM_TIMER()
+	ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
 
 // CYUVPlayerDlg 消息处理程序
@@ -307,7 +314,7 @@ void CYUVPlayerDlg::OnSysCommand(UINT nID, LPARAM lParam)
 void CYUVPlayerDlg::OnPaint()
 {
     //picture控件背景色为黑色
-    if (m_fShowBlack)
+    if (1)
     {
         CRect rtTop;
         CStatic *pWnd = (CStatic*)GetDlgItem(IDC_VIDEO);
@@ -504,6 +511,12 @@ void CYUVPlayerDlg::PlayStandby()
 	{
 		return;
 	}
+	//初始比例
+	m_iPercent = 100;
+	m_ZoomDelt.X = 0;
+	m_ZoomDelt.Y = 0;
+	m_ZoomDeltPre.X = 0;
+	m_ZoomDeltPre.Y = 0;
 	wchar_t szFileName[128] = { 0 };
 	_wsplitpath(m_strPathName, NULL, NULL, szFileName, NULL);
 
@@ -784,23 +797,9 @@ void CYUVPlayerDlg::OnDropFiles(HDROP hDropInfo)
     m_strPathName.Format(_T("%s"), pFilePathName);
     ::DragFinish(hDropInfo);
 
-    // 找文件名
-    wchar_t* tmp = wcsrchr(pFilePathName, '\\');
-    char szFilename[256] = {0};
-    WideCharToMultiByte(CP_ACP, 0, tmp+1, wcslen(tmp+1), szFilename, 256, NULL, NULL);
-    
-    // 显示标题
-    CString strTemp;
-    strTemp.Format(_T("%s-%s"), tmp+1, APP_NAM);
-    this->SetWindowText(strTemp);
+	free(pFilePathName);
 
-    free(pFilePathName);
-
-    m_pSettingDlg->ParseFilename(szFilename);
-    m_pSettingDlg->SetParametersToParentWnd(m_nWidth, m_nHeight, m_nFps, m_nYuvFormat, m_fLoop);
-
-    // 显示第一帧
-    ShowOpenedFrame();
+	PlayStandby();
 
 #if 0
     save_yuv_file("rainbow_176x144_yuyv.yuv", 176, 144, FMT_YUYV);
@@ -826,7 +825,6 @@ void CYUVPlayerDlg::OnDropFiles(HDROP hDropInfo)
 
 	// 找文件名
 	_wsplitpath(m_strPathName, drive, dir, szFileName, NULL);
-	//pExt = &szExt[1];
 
 	strFile.Format(_T("%s%s%s.%s"), drive, dir, szFileName, pExt);
 
@@ -1015,16 +1013,27 @@ void CYUVPlayerDlg::ShowOpenedFrame()
     m_slProgress.EnableWindow(TRUE);
 }
 
-inline void RenderBitmap(CWnd *pWnd, Bitmap* pbmp)
+void CYUVPlayerDlg::RenderBitmap(CWnd *pWnd, Bitmap* pbmp)
 {
     RECT rect;
     pWnd->GetClientRect( &rect );
 
+	int width = 0;
+	int height = 0;
+
     Graphics grf( pWnd->m_hWnd );
     if ( grf.GetLastStatus() == Ok )
     {
-        Rect rc( rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top );
-
+		//重算放大位置
+		//d1 = delt1 - delt1 * ratio1;
+		//temp = (delt2 - d1)/ratio1;//还原鼠标指针所在位置在图像中的真实比例，OnMouseWheel函数中实现
+		//d2 = temp - temp * ratio2;
+		width = (rect.right - rect.left) * m_iPercent / 100;
+		height = (rect.bottom - rect.top) * m_iPercent / 100;
+		m_ZoomDeltPre.X = m_ZoomDelt.X - m_ZoomDelt.X * m_iPercent / 100;
+		m_ZoomDeltPre.Y = m_ZoomDelt.Y - m_ZoomDelt.Y * m_iPercent / 100;
+        Rect rc(m_ZoomDeltPre.X, m_ZoomDeltPre.Y, width, height);
+		
         grf.DrawImage(pbmp, rc);
     }
 }
@@ -1077,4 +1086,58 @@ void CYUVPlayerDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
     //this->ShowFrameCount(m_nCurrentFrame);
 
     CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
+}
+
+
+BOOL CYUVPlayerDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	CRect rect;
+	GetDlgItem(IDC_VIDEO)->GetWindowRect(&rect);//获取MFC图像显示区域
+	Point p(pt.x, pt.y);//鼠标坐标
+
+	Rect r(rect.left, rect.top, rect.right, rect.bottom);//图片窗口显示区域
+
+	int bUpdateFlag = 0;
+	int iLastPercent = m_iPercent;
+	if (r.Contains(p)) //鼠标放在图片窗口上
+	{
+		if (zDelta > 0)//放大图片
+		{
+			m_iPercent = iLastPercent * 2;
+			//保证能恢复到100
+			if (m_iPercent > 12800)
+			{
+				m_iPercent = 12800;
+			}
+			else
+			{
+				bUpdateFlag = 1;
+			}
+		}
+		else if (zDelta < 0)//缩小图片
+		{
+			m_iPercent = iLastPercent / 2;
+			//保证能恢复到100
+			if (m_iPercent < 25)
+			{
+				m_iPercent = 25;
+			}
+			else
+			{
+				bUpdateFlag = 1;
+			}
+		}
+		
+		if (1 == bUpdateFlag)
+		{
+			//还原鼠标指针所在位置在图像中的真实比例：temp = (delt2 - d1)/ratio1;
+			m_ZoomDelt.X = (pt.x - rect.left - m_ZoomDeltPre.X) * 100 / iLastPercent;
+			m_ZoomDelt.Y = (pt.y - rect.top - m_ZoomDeltPre.Y) * 100 / iLastPercent;
+
+			Invalidate(FALSE);
+		}
+	}
+
+	return CDialogEx::OnMouseWheel(nFlags, zDelta, pt);
 }

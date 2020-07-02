@@ -41,6 +41,9 @@ public:
     int m_nHeight;
     int m_nFps;
     int m_nYuvFormat;
+	int m_iPercent;
+	Point m_ZoomDeltPre;
+	Point m_ZoomDelt;
     BOOL m_fLoop;
 
     int m_nStartX[2][11];   // 窗口拖动所需位置
@@ -72,6 +75,7 @@ public:
     void ShowFrameCount(INT nCurrentFrame);
 
     void ShowOpenedFrame();
+	void RenderBitmap(CWnd *pWnd, Bitmap* pbmp);
     void ShowPicture(BYTE* pbData, int iSize);
 
     void SetParentParameters(int width, int height, int fps, int fmt, BOOL loop);
@@ -131,4 +135,5 @@ public:
 
 	afx_msg void PlayStandby();
 	afx_msg void UpdateFilePath(CString PathName);
+	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
 };
