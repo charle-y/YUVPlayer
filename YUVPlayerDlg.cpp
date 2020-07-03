@@ -113,10 +113,12 @@ CYUVPlayerDlg::CYUVPlayerDlg(CWnd* pParent /*=NULL*/)
     m_nWidth = 176;
     m_nHeight = 144;
 	m_iPercent = 100;
-	m_ZoomDelt.X = 0;
-	m_ZoomDelt.Y = 0;
-	m_ZoomDeltPre.X = 0;
-	m_ZoomDeltPre.Y = 0;
+	m_ZoomMouseDelt.X = 0;
+	m_ZoomMouseDelt.Y = 0;
+	m_ZoomPicOffset.X = 0;
+	m_ZoomPicOffset.Y = 0;
+
+	m_strWindowsText.Format(_T("%s"), APP_NAM);
 
     m_nFps = 30;
     m_nYuvFormat = 0;
@@ -199,6 +201,7 @@ BEGIN_MESSAGE_MAP(CYUVPlayerDlg, CDialogEx)
     ON_WM_HSCROLL()
     ON_WM_TIMER()
 	ON_WM_MOUSEWHEEL()
+	ON_WM_MOUSEMOVE()
 END_MESSAGE_MAP()
 
 // CYUVPlayerDlg 消息处理程序
@@ -513,10 +516,10 @@ void CYUVPlayerDlg::PlayStandby()
 	}
 	//初始比例
 	m_iPercent = 100;
-	m_ZoomDelt.X = 0;
-	m_ZoomDelt.Y = 0;
-	m_ZoomDeltPre.X = 0;
-	m_ZoomDeltPre.Y = 0;
+	m_ZoomMouseDelt.X = 0;
+	m_ZoomMouseDelt.Y = 0;
+	m_ZoomPicOffset.X = 0;
+	m_ZoomPicOffset.Y = 0;
 	wchar_t szFileName[128] = { 0 };
 	_wsplitpath(m_strPathName, NULL, NULL, szFileName, NULL);
 
@@ -524,10 +527,9 @@ void CYUVPlayerDlg::PlayStandby()
 	m_bPlay.SetBitmap(LoadBitmap(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDB_BM_PLAY)));
 	m_fPlay = TRUE;
 
-	// 显示标题
-	CString strTemp;
-	strTemp.Format(_T("%s-%s"), szFileName, APP_NAM);
-	this->SetWindowText(strTemp);
+	// 显示标题s
+	m_strWindowsText.Format(_T("%s-%s"), szFileName, APP_NAM);
+	this->SetWindowText(m_strWindowsText);
 
 	// 找文件名
 	wchar_t* tmp = wcsrchr(m_strPathName.GetBuffer(), '\\');
@@ -1030,9 +1032,9 @@ void CYUVPlayerDlg::RenderBitmap(CWnd *pWnd, Bitmap* pbmp)
 		//d2 = temp - temp * ratio2;
 		width = (rect.right - rect.left) * m_iPercent / 100;
 		height = (rect.bottom - rect.top) * m_iPercent / 100;
-		m_ZoomDeltPre.X = m_ZoomDelt.X - m_ZoomDelt.X * m_iPercent / 100;
-		m_ZoomDeltPre.Y = m_ZoomDelt.Y - m_ZoomDelt.Y * m_iPercent / 100;
-        Rect rc(m_ZoomDeltPre.X, m_ZoomDeltPre.Y, width, height);
+		m_ZoomPicOffset.X = m_ZoomMouseDelt.X - m_ZoomMouseDelt.X * m_iPercent / 100;
+		m_ZoomPicOffset.Y = m_ZoomMouseDelt.Y - m_ZoomMouseDelt.Y * m_iPercent / 100;
+        Rect rc(m_ZoomPicOffset.X, m_ZoomPicOffset.Y, width, height);
 		
         grf.DrawImage(pbmp, rc);
     }
@@ -1094,7 +1096,7 @@ BOOL CYUVPlayerDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	CRect rect;
 	GetDlgItem(IDC_VIDEO)->GetWindowRect(&rect);//获取MFC图像显示区域
-	Point p(pt.x, pt.y);//鼠标坐标
+	Point p(pt.x, pt.y);//鼠标坐标，相对于电脑屏幕
 
 	Rect r(rect.left, rect.top, rect.right, rect.bottom);//图片窗口显示区域
 
@@ -1132,12 +1134,38 @@ BOOL CYUVPlayerDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 		if (1 == bUpdateFlag)
 		{
 			//还原鼠标指针所在位置在图像中的真实比例：temp = (delt2 - d1)/ratio1;
-			m_ZoomDelt.X = (pt.x - rect.left - m_ZoomDeltPre.X) * 100 / iLastPercent;
-			m_ZoomDelt.Y = (pt.y - rect.top - m_ZoomDeltPre.Y) * 100 / iLastPercent;
+			m_ZoomMouseDelt.X = (pt.x - rect.left - m_ZoomPicOffset.X) * 100 / iLastPercent;
+			m_ZoomMouseDelt.Y = (pt.y - rect.top - m_ZoomPicOffset.Y) * 100 / iLastPercent;
 
 			Invalidate(FALSE);
 		}
 	}
 
 	return CDialogEx::OnMouseWheel(nFlags, zDelta, pt);
+}
+
+
+void CYUVPlayerDlg::OnMouseMove(UINT nFlags, CPoint point)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	Point p (point.x, point.y);//鼠标坐标相对于窗口
+
+	RECT rect;
+	GetDlgItem(IDC_VIDEO)->GetClientRect(&rect);
+	Rect r(rect.left, rect.top, rect.right, rect.bottom);
+	if (r.Contains(p))
+	{
+		////显示图像实际分辨率位置
+		int x = m_nWidth * ((LONG64)p.X - (LONG64)m_ZoomPicOffset.X) * 100 / m_iPercent / rect.right;
+		int y = m_nHeight * ((LONG64)p.Y - (LONG64)m_ZoomPicOffset.Y) * 100 / m_iPercent / rect.bottom;
+
+		CString str;
+		str.Format(_T("    [%d,%d]"), x, y);
+		// 显示标题
+		CString strTemp(m_strWindowsText);
+		strTemp.Append(str);
+		this->SetWindowText(strTemp);
+	}
+	
+	CDialogEx::OnMouseMove(nFlags, point);
 }

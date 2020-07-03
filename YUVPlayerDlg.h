@@ -42,8 +42,9 @@ public:
     int m_nFps;
     int m_nYuvFormat;
 	int m_iPercent;
-	Point m_ZoomDeltPre;
-	Point m_ZoomDelt;
+	Point m_ZoomPicOffset;//图像左上角相对显示框的位置
+	Point m_ZoomMouseDelt;//鼠标指针所在位置相对图像左上角的位置（显示框比例）
+	CString m_strWindowsText;
     BOOL m_fLoop;
 
     int m_nStartX[2][11];   // 窗口拖动所需位置
@@ -136,4 +137,5 @@ public:
 	afx_msg void PlayStandby();
 	afx_msg void UpdateFilePath(CString PathName);
 	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 };
